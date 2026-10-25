@@ -1,9 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
-import { loadData, saveData } from "@/lib/db";
+import { loadData, saveData, hasDB } from "@/lib/db";
 import { DEFAULT_HABITS, DEFAULT_BRAND_MILESTONES } from "@/types";
 import type { DashboardData } from "@/types";
 
+// Without a database the dashboard keeps everything on the device instead.
+const noDB = () => NextResponse.json({ error: "no-db" }, { status: 503 });
+
 export async function GET() {
+  if (!hasDB()) return noDB();
   try {
     let data = await loadData();
     if (!data) {
@@ -40,6 +44,7 @@ export async function GET() {
 }
 
 export async function POST(req: NextRequest) {
+  if (!hasDB()) return noDB();
   try {
     const data: DashboardData = await req.json();
     data.lastUpdated = new Date().toISOString();

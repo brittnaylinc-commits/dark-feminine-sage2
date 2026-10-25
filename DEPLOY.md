@@ -3,6 +3,27 @@
 
 ---
 
+## Fastest start (tonight, ~10 minutes)
+
+1. Deploy to Vercel (Step 3 below). You can skip the database for now: the dashboard
+   saves everything on your iPad until you connect one.
+2. On your iPad, open your Vercel URL in **Safari** → Share button → **Add to Home Screen**.
+   It now opens full-screen like an app.
+3. Settings → **Download backup** every Sunday until the database is connected.
+4. Add Neon (Step 1) when you have time — then your data syncs across devices and your
+   text reminders include your own to-dos.
+
+## Daily text reminders (iPhone Shortcuts, free)
+
+In the dashboard go to **Settings → Daily Text Reminders**. It shows three links
+(morning / afternoon / evening). For each one, in the iPhone **Shortcuts** app:
+Automation → + → Time of Day → Run Immediately → *Get Contents of URL* (paste link) →
+*Show Notification* (or *Send Message* to yourself) with "Contents of URL".
+Set `TZ_NAME` in Vercel if you're not in Central time (e.g. `America/New_York`).
+This replaces the Cowork steps below.
+
+---
+
 ## What You're Deploying
 
 A personal life + brand dashboard that lives at a real URL, with:

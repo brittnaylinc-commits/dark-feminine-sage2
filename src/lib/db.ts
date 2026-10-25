@@ -1,10 +1,13 @@
 import { neon } from "@neondatabase/serverless";
 import type { DashboardData } from "@/types";
 
-const sql = neon(process.env.DATABASE_URL!);
+// Created lazily so the app still builds and runs (with on-device storage)
+// before a Neon database has been connected.
+export const hasDB = () => !!process.env.DATABASE_URL;
+const db = () => neon(process.env.DATABASE_URL!);
 
 export async function initDB() {
-  await sql`
+  await db()`
     CREATE TABLE IF NOT EXISTS dashboard (
       id TEXT PRIMARY KEY DEFAULT 'bri',
       data JSONB NOT NULL,
@@ -15,14 +18,14 @@ export async function initDB() {
 
 export async function loadData(): Promise<DashboardData | null> {
   await initDB();
-  const rows = await sql`SELECT data FROM dashboard WHERE id = 'bri' LIMIT 1`;
+  const rows = await db()`SELECT data FROM dashboard WHERE id = 'bri' LIMIT 1`;
   if (rows.length === 0) return null;
   return rows[0].data as DashboardData;
 }
 
 export async function saveData(data: DashboardData): Promise<void> {
   await initDB();
-  await sql`
+  await db()`
     INSERT INTO dashboard (id, data, updated_at)
     VALUES ('bri', ${JSON.stringify(data)}, NOW())
     ON CONFLICT (id) DO UPDATE

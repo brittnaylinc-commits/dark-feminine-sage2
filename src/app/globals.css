@@ -223,3 +223,37 @@ h1, h2, h3 { font-family: var(--font-display), serif; }
   border-bottom: 2px solid transparent;
 }
 .tab-inactive:hover { color: var(--text); }
+
+/* ─── iPad layout ────────────────────────────────────────────────── */
+.main-pane {
+  padding: calc(24px + env(safe-area-inset-top)) 20px calc(110px + env(safe-area-inset-bottom));
+}
+@media (min-width: 768px) {
+  .main-pane { padding-left: 32px; padding-right: 32px; }
+}
+@media (min-width: 1024px) {
+  .main-pane { margin-left: 224px; padding: calc(40px + env(safe-area-inset-top)) 40px 80px; }
+}
+
+/* Comfortable touch targets + no grey flash on tap */
+.tap { min-height: 44px; -webkit-tap-highlight-color: transparent; }
+.tap:active { transform: scale(0.98); }
+button, a { -webkit-tap-highlight-color: transparent; }
+
+/* iOS zooms into inputs under 16px — keep them at 16px */
+.input-dark, textarea, input, select { font-size: 16px; }
+
+.no-scrollbar { scrollbar-width: none; }
+.no-scrollbar::-webkit-scrollbar { display: none; }
+
+@keyframes celebrate {
+  0% { opacity: 0; transform: scale(0.8) translateY(10px); }
+  15% { opacity: 1; transform: scale(1.04); }
+  80% { opacity: 1; transform: scale(1); }
+  100% { opacity: 0; transform: scale(0.98) translateY(-8px); }
+}
+.celebrate { animation: celebrate 1.8s ease forwards; }
+
+@media (prefers-reduced-motion: reduce) {
+  .fade-up, .fade-up-1, .fade-up-2, .fade-up-3, .fade-up-4, .fade-up-5, .celebrate { animation-duration: 0.01s; }
+}

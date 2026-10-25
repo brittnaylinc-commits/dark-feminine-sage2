@@ -106,6 +106,84 @@ export interface BrandMilestone {
   notes?: string;
 }
 
+// ─── THE NEW ME PROJECT / DAILY LIFE ─────────────────────────────────────────
+
+export type TodoCategory = "Me" | "Work" | "Kids" | "Home" | "Fitness" | "Meals" | "Content" | "Faith" | "Money" | "Hobby";
+
+export interface Todo {
+  id: string;
+  text: string;
+  date: string; // YYYY-MM-DD it's planned for
+  category: TodoCategory;
+  done: boolean;
+  time?: string; // "HH:MM", optional
+}
+
+export interface DayLog {
+  mood?: number; // 1–5
+  feel?: string;
+  need?: string;
+  notEntertaining?: string;
+  healthiest?: string;
+  intention?: string;
+  morningDone?: boolean;
+  selfPres?: string;
+  afternoonDone?: boolean;
+  journal?: Record<string, string>;
+  eveningDone?: boolean;
+  checks?: string[]; // checklist item ids completed
+  water?: number; // glasses
+  workoutDone?: boolean;
+  dailyTextRead?: boolean;
+  lowEnergy?: boolean;
+  winner?: "old" | "new"; // which belief system won today
+}
+
+export interface OldNewEntry {
+  id: string;
+  date: string;
+  situation: string;
+  old: string;
+  next: string;
+}
+
+export interface NewMeData {
+  vision: string;
+  days: Record<string, DayLog>;
+  weeks: Record<string, Record<string, string>>; // week number → reflection fields
+  oldNew: OldNewEntry[];
+  dec31: Record<string, string>;
+}
+
+export interface ParentingDay {
+  who: "me" | "coparent" | "split" | "";
+  note: string;
+}
+
+export interface MealWeek {
+  plan: Record<string, string>; // "Mon-B" → "Overnight oats"
+  grocery: { id: string; text: string; done: boolean }[];
+  prepDone: boolean;
+}
+
+export interface Hobby { id: string; label: string; icon: string }
+
+export interface Transit {
+  id: string;
+  date: string;
+  endDate?: string;
+  title: string;
+  note: string;
+}
+
+export interface HumanDesign {
+  type: string;
+  strategy: string;
+  authority: string;
+  profile: string;
+  notes: string;
+}
+
 // ─── ROOT DATA OBJECT ────────────────────────────────────────────────────────
 
 export interface DashboardData {
@@ -128,6 +206,16 @@ export interface DashboardData {
   // Brand
   contentItems: ContentItem[];
   brandMilestones: BrandMilestone[];
+
+  // The New Me Project + daily life (optional so older saved data still loads)
+  newMe?: NewMeData;
+  todos?: Todo[];
+  parenting?: Record<string, ParentingDay>; // weekday 0–6 → default
+  meals?: Record<string, MealWeek>; // weekKey → week
+  hobbies?: Hobby[];
+  hobbyLogs?: { hobbyId: string; date: string }[];
+  transits?: Transit[];
+  humanDesign?: HumanDesign;
 
   // Meta
   lastUpdated: string;
@@ -193,4 +281,10 @@ export const DEFAULT_BRAND_MILESTONES: BrandMilestone[] = [
     id: "m4", phase: 4, title: "Multi-Stream Revenue", targetDate: "2026-12-31",
     completed: false, notes: "All 3 streams generating income"
   },
+];
+
+export const DEFAULT_HOBBIES: Hobby[] = [
+  { id: "hb1", label: "Reading", icon: "📚" },
+  { id: "hb2", label: "French", icon: "🗼" },
+  { id: "hb3", label: "Creative time", icon: "🎨" },
 ];

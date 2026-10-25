@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Cormorant_Garamond, DM_Sans } from "next/font/google";
 import "./globals.css";
 
@@ -17,8 +17,16 @@ const body = DM_Sans({
 
 export const metadata: Metadata = {
   title: "Dark Feminine Sage ✦ Dashboard",
-  description: "Bri's personal life & brand command center",
+  description: "Brit's daily dashboard — The New Me Project",
+  appleWebApp: { capable: true, title: "New Me", statusBarStyle: "black-translucent" },
   icons: { icon: "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>✦</text></svg>" },
+};
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
+  themeColor: "#0d0a0e",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

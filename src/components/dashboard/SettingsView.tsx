@@ -5,7 +5,12 @@ import { useDashboard } from "@/lib/context";
 import type { BirthData } from "@/types";
 
 export function SettingsView() {
-  const { data, update } = useDashboard();
+  const { data, update, mode } = useDashboard();
+  const [key, setKey] = useState(() => {
+    try { return localStorage.getItem("dfs-reminder-key") ?? ""; } catch { return ""; }
+  });
+  const origin = typeof window !== "undefined" ? window.location.origin : "https://your-app.vercel.app";
+  const reminderUrl = (slot: string) => `${origin}/api/briefing?slot=${slot}&format=text${key ? `&key=${encodeURIComponent(key)}` : ""}`;
   const [saved, setSaved] = useState(false);
   const [birthForm, setBirthForm] = useState<BirthData>(
     data?.birthData ?? { date: "1993-01-07", time: "00:00", location: "Chicago, IL" }
@@ -14,6 +19,25 @@ export function SettingsView() {
   const [briefingResult, setBriefingResult] = useState("");
 
   if (!data) return null;
+
+  function exportBackup() {
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = `new-me-backup-${new Date().toISOString().slice(0, 10)}.json`;
+    a.click();
+  }
+
+  function importBackup(file: File) {
+    file.text().then(t => {
+      try {
+        const parsed = JSON.parse(t);
+        if (confirm("Replace everything on this dashboard with this backup?")) update(() => parsed);
+      } catch {
+        alert("That file isn't a dashboard backup.");
+      }
+    });
+  }
 
   function saveBirthData() {
     update(d => ({ ...d, birthData: birthForm }));
@@ -25,9 +49,8 @@ export function SettingsView() {
     setTestingBriefing(true);
     setBriefingResult("");
     try {
-      const res = await fetch("/api/briefing", {
-        headers: { "x-cron-secret": "" }, // dev mode — no secret needed in preview
-      });
+      try { localStorage.setItem("dfs-reminder-key", key); } catch {}
+      const res = await fetch(`/api/briefing?key=${encodeURIComponent(key)}`);
       const data = await res.json();
       if (data.message) {
         setBriefingResult(data.message);
@@ -63,6 +86,23 @@ export function SettingsView() {
       <div>
         <h1 className="font-display text-3xl font-light italic" style={{ color: "#e8dff0" }}>Settings</h1>
         <p className="text-sm mt-1" style={{ color: "#6b5f7a" }}>Personalize your dashboard</p>
+      </div>
+
+      {/* Your data */}
+      <div className="card p-6">
+        <h2 className="font-display text-lg font-medium mb-1" style={{ color: "#c9a96e" }}>Your Data</h2>
+        <p className="text-sm mb-4" style={{ color: "#9e8fb0" }}>
+          {mode === "cloud"
+            ? "☁️ Synced to your database — the same on every device."
+            : "📱 Saved on this device only. Connect the free Neon database (see DEPLOY.md) to sync and to get text reminders with your real to-dos. Until then, export a backup every Sunday."}
+        </p>
+        <div className="flex gap-3 flex-wrap">
+          <button className="btn-gold" onClick={exportBackup}>Download backup</button>
+          <label className="btn-ghost cursor-pointer">
+            Restore from backup
+            <input type="file" accept="application/json" className="hidden" onChange={e => e.target.files?.[0] && importBackup(e.target.files[0])} />
+          </label>
+        </div>
       </div>
 
       {/* Birth Data */}
@@ -107,27 +147,29 @@ export function SettingsView() {
 
       {/* Morning Briefing */}
       <div className="card p-6">
-        <h2 className="font-display text-lg font-medium mb-1" style={{ color: "#c9a96e" }}>Morning Briefing</h2>
-        <p className="text-xs mb-4" style={{ color: "#6b5f7a" }}>
-          Delivered via Cowork → iMessage at 6:00 AM daily. Includes: intention, calendar, tasks, habits, astro note.
+        <h2 className="font-display text-lg font-medium mb-1" style={{ color: "#c9a96e" }}>Daily Text Reminders</h2>
+        <p className="text-sm mb-4" style={{ color: "#9e8fb0" }}>
+          Free, using the Shortcuts app already on your iPhone. You get a morning plan (week focus, workout, checklist, to-dos,
+          daily text link, affirmation), an afternoon self-preservation nudge, and an evening reflection reminder.
         </p>
 
         <div className="space-y-4">
-          {/* Cowork setup steps */}
+          <label className="block">
+            <span className="text-xs mb-1 block" style={{ color: "#6b5f7a" }}>Reminder key (the CRON_SECRET you set in Vercel)</span>
+            <input className="input-dark" value={key} onChange={e => setKey(e.target.value)} placeholder="dfs_morning_2026_..." />
+          </label>
           <div className="space-y-2">
-            <h3 className="text-sm font-medium" style={{ color: "#e8dff0" }}>Setup with Cowork (Mac + iPhone)</h3>
+            <h3 className="text-sm font-medium" style={{ color: "#e8dff0" }}>On your iPhone, do this 3 times (7:00 AM, 1:00 PM, 8:00 PM):</h3>
             <ol className="space-y-2">
               {[
-                "Download Cowork from coworkapp.ai",
-                "In Cowork, create a new automation → Scheduled → Daily → 6:00 AM",
-                `Set Action: HTTP Request → GET → ${typeof window !== "undefined" ? window.location.origin : "https://your-app.vercel.app"}/api/briefing`,
-                "Add header: x-cron-secret → [your CRON_SECRET from .env]",
-                "Add follow-up action: Send iMessage → paste response body → to your number",
-                "To check off tasks by text: add a second automation triggered by incoming iMessage reply starting with 'done'",
+                "Shortcuts app → Automation → + → Time of Day → pick the time → Daily → Run Immediately",
+                "Add action: Get Contents of URL → paste the link for that time (below)",
+                "Add action: Show Notification (or Send Message to yourself) → choose \"Contents of URL\"",
+                "Done. Tap the notification to open your dashboard.",
               ].map((step, i) => (
-                <li key={i} className="flex gap-3 text-xs" style={{ color: "#9e8fb0" }}>
+                <li key={i} className="flex gap-3 text-sm" style={{ color: "#9e8fb0" }}>
                   <span
-                    className="w-5 h-5 rounded-full flex items-center justify-center shrink-0 text-xs font-medium"
+                    className="w-6 h-6 rounded-full flex items-center justify-center shrink-0 text-xs font-medium"
                     style={{ background: "rgba(201,169,110,0.1)", color: "#c9a96e" }}
                   >
                     {i + 1}
@@ -137,6 +179,15 @@ export function SettingsView() {
               ))}
             </ol>
           </div>
+          {[["☀️ Morning", "morning"], ["🌿 Afternoon", "afternoon"], ["🌙 Evening", "evening"]].map(([label, slot]) => (
+            <div key={slot}>
+              <div className="text-xs mb-1" style={{ color: "#6b5f7a" }}>{label}</div>
+              <div className="flex gap-2">
+                <input readOnly className="input-dark text-xs" value={reminderUrl(slot)} onFocus={e => e.target.select()} />
+                <button className="btn-ghost shrink-0" onClick={() => navigator.clipboard?.writeText(reminderUrl(slot))}>Copy</button>
+              </div>
+            </div>
+          ))}
 
           <div className="gold-line" />
 
@@ -220,7 +271,7 @@ export function SettingsView() {
       <div className="card p-6">
         <h2 className="font-display text-lg font-medium mb-3" style={{ color: "#c9a96e" }}>About This Dashboard</h2>
         <div className="space-y-1 text-xs" style={{ color: "#6b5f7a" }}>
-          <p>Dark Feminine Sage Dashboard · Built for Bri</p>
+          <p>Dark Feminine Sage Dashboard · The New Me Project</p>
           <p>Stack: Next.js 14 · Neon Postgres · Anthropic Claude · Vercel</p>
           <p>Last data sync: {new Date(data.lastUpdated).toLocaleString()}</p>
         </div>
