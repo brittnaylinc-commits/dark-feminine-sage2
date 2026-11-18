@@ -1,5 +1,5 @@
-import type { Metadata } from "next";
-import { Cormorant_Garamond, DM_Sans } from "next/font/google";
+import type { Metadata, Viewport } from "next";
+import { Cormorant_Garamond, DM_Sans, Unbounded, Great_Vibes } from "next/font/google";
 import "./globals.css";
 
 const display = Cormorant_Garamond({
@@ -15,15 +15,36 @@ const body = DM_Sans({
   variable: "--font-body",
 });
 
+// Bold extended headline + script greeting for the Today header
+const wide = Unbounded({
+  subsets: ["latin"],
+  weight: ["700", "900"],
+  variable: "--font-wide",
+});
+
+const script = Great_Vibes({
+  subsets: ["latin"],
+  weight: ["400"],
+  variable: "--font-script",
+});
+
 export const metadata: Metadata = {
   title: "Dark Feminine Sage ✦ Dashboard",
-  description: "Bri's personal life & brand command center",
+  description: "Brit's daily dashboard — The New Me Project",
+  appleWebApp: { capable: true, title: "New Me", statusBarStyle: "black-translucent" },
   icons: { icon: "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>✦</text></svg>" },
+};
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
+  themeColor: "#0d0a0e",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className={`${display.variable} ${body.variable}`}>
+    <html lang="en" className={`${display.variable} ${body.variable} ${wide.variable} ${script.variable}`}>
       <body className="bg-obsidian text-text font-body antialiased">{children}</body>
     </html>
   );

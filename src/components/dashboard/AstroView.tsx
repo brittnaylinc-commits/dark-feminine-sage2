@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useDashboard } from "@/lib/context";
 import { getMonthKey, formatMonthKey } from "@/lib/utils";
 import type { MonthlyAstroReading } from "@/types";
+import { CosmicPlanner } from "./CosmicPlanner";
 
 export function AstroView() {
   const { data, update } = useDashboard();
@@ -257,6 +258,8 @@ export function AstroView() {
           </div>
         </div>
       )}
+
+      <CosmicPlanner />
     </div>
   );
 }

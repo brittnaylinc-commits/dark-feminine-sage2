@@ -25,10 +25,10 @@ export function getMonthKey(date: Date = new Date()): string {
 export function getWeekDates(weekKey: string): Date[] {
   const [yearStr, weekStr] = weekKey.split("-W");
   const year = parseInt(yearStr), week = parseInt(weekStr);
-  const jan1 = new Date(year, 0, 1);
-  const daysToMonday = (1 - jan1.getDay() + 7) % 7;
-  const monday = new Date(jan1);
-  monday.setDate(jan1.getDate() + daysToMonday + (week - 1) * 7);
+  // ISO week 1 is the week containing January 4th.
+  const jan4 = new Date(year, 0, 4);
+  const monday = new Date(jan4);
+  monday.setDate(jan4.getDate() - ((jan4.getDay() + 6) % 7) + (week - 1) * 7);
   return Array.from({ length: 7 }, (_, i) => {
     const d = new Date(monday);
     d.setDate(monday.getDate() + i);
@@ -40,8 +40,15 @@ export function formatDate(date: Date): string {
   return date.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" });
 }
 
+// Local calendar date (toISOString would roll over to tomorrow in the evening).
 export function toISO(date: Date): string {
-  return date.toISOString().split("T")[0];
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+}
+
+export function addDays(iso: string, n: number): string {
+  const d = new Date(iso + "T12:00:00");
+  d.setDate(d.getDate() + n);
+  return toISO(d);
 }
 
 export function todayISO(): string {
@@ -77,6 +84,19 @@ export const STATUS_COLORS: Record<string, { bg: string; text: string }> = {
   editing:    { bg: "rgba(122,158,168,0.15)", text: "#7a9ea8" },
   scheduled:  { bg: "rgba(142,158,122,0.15)", text: "#8e9e7a" },
   published:  { bg: "rgba(142,158,122,0.25)", text: "#a8c48a" },
+};
+
+export const TODO_CATEGORIES: Record<string, { icon: string; color: string }> = {
+  Me:      { icon: "🦋", color: "#b87c8a" },
+  Work:    { icon: "💼", color: "#7a9ea8" },
+  Kids:    { icon: "🧸", color: "#e0c992" },
+  Home:    { icon: "🏡", color: "#8e9e7a" },
+  Fitness: { icon: "🍑", color: "#c9a96e" },
+  Meals:   { icon: "🥗", color: "#8e9e7a" },
+  Content: { icon: "🎬", color: "#b87c8a" },
+  Faith:   { icon: "🙏🏽", color: "#9b8ab4" },
+  Money:   { icon: "💸", color: "#7a9ea8" },
+  Hobby:   { icon: "🎨", color: "#9b8ab4" },
 };
 
 export const PLATFORM_ICONS: Record<string, string> = {

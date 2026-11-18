@@ -1,6 +1,23 @@
 import { NextRequest, NextResponse } from "next/server";
-import { loadData, getWeekKey, getMonthKey } from "@/lib/db";
+import { loadData, getWeekKey, getMonthKey, hasDB } from "@/lib/db";
+import type { DashboardData } from "@/types";
 import { google } from "googleapis";
+import { NAME, DAILY_CHECKLIST, weekFor, dayNumber, TOTAL_DAYS, affirmationFor, workoutFor, daysUntil, RACE_DATE, MORNING_DECLARATION, AFTERNOON_QUESTION } from "@/lib/newme";
+
+// Your local time zone, so "today" matches your iPad (set TZ_NAME in Vercel if you're not in Central time).
+const TZ = process.env.TZ_NAME || "America/Chicago";
+function localNow(): Date {
+  return new Date(new Date().toLocaleString("en-US", { timeZone: TZ }));
+}
+const iso = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+
+function authorized(req: NextRequest) {
+  const secret = process.env.CRON_SECRET;
+  if (!secret) return true;
+  return req.headers.get("x-cron-secret") === secret
+    || req.headers.get("authorization") === `Bearer ${secret}` // Vercel cron
+    || req.nextUrl.searchParams.get("key") === secret; // iPhone Shortcuts
+}
 
 // ─── Auth Helper ─────────────────────────────────────────────────────────────
 function getOAuth2Client() {
@@ -14,20 +31,46 @@ function getOAuth2Client() {
 // ─── Main Briefing Generator ─────────────────────────────────────────────────
 export async function GET(req: NextRequest) {
   // Protect cron endpoint
-  const secret = req.headers.get("x-cron-secret");
-  if (secret !== process.env.CRON_SECRET) {
+  if (!authorized(req)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
+  const slot = req.nextUrl.searchParams.get("slot") ?? "morning";
+  const asText = req.nextUrl.searchParams.get("format") === "text";
 
   try {
-    const data = await loadData();
-    if (!data) return NextResponse.json({ error: "No data" }, { status: 404 });
+    // Without a database the reminder still has the program content, just not your own to-dos.
+    const data: DashboardData = (hasDB() ? await loadData() : null) ?? {
+      tasks: [], habitLogs: [], habits: [], weeklyFocus: [], gymSessions: [], quarterlyGoals: [], achievements: [],
+      finances: [], astroReadings: [], contentItems: [], brandMilestones: [], lastUpdated: "",
+    };
 
-    const today = new Date();
+    const today = localNow();
     const todayStr = today.toLocaleDateString("en-US", {
       weekday: "long", month: "long", day: "numeric"
     });
-    const todayISO = today.toISOString().split("T")[0];
+    const todayISO = iso(today);
+
+    // ── Afternoon / evening nudges are short ──
+    if (slot !== "morning") {
+      const log = data.newMe?.days?.[todayISO] ?? {};
+      const open = (data.todos ?? []).filter(t => t.date === todayISO && !t.done);
+      const msg = slot === "afternoon"
+        ? [
+            `🌿 Afternoon check-in, ${NAME}`,
+            log.intention ? `Your intention: "${log.intention}"` : "",
+            log.afternoonDone ? "Self-preservation ✓ — beautiful." : "Pick one small act of self-preservation today.",
+            `Feeling guilty? "${AFTERNOON_QUESTION}"`,
+            open.length ? `Still open: ${open.slice(0, 3).map(t => t.text).join(" · ")}` : "",
+          ]
+        : [
+            `🌙 Evening reflection, ${NAME}`,
+            "5 lines: old belief · trigger · response · new belief · one thing I'm proud of.",
+            log.workoutDone ? "Workout ✓" : "",
+            "Which belief system won today? Either answer is okay. 🤍",
+          ];
+      const message = msg.filter(Boolean).join("\n");
+      return asText ? new NextResponse(message) : NextResponse.json({ message });
+    }
     const weekKey = getWeekKey(today);
     const monthKey = getMonthKey(today);
 
@@ -38,11 +81,6 @@ export async function GET(req: NextRequest) {
 
     // ── Weekly intention ──
     const weekFocus = data.weeklyFocus.find(w => w.weekKey === weekKey);
-
-    // ── Habits: today's log ──
-    const todayHabits = data.habitLogs.filter(l => l.date === todayISO);
-    const totalHabits = data.habits.length;
-    const doneHabits = todayHabits.length;
 
     // ── Astro note for the month ──
     const astro = data.astroReadings.find(r => r.monthKey === monthKey);
@@ -83,8 +121,47 @@ export async function GET(req: NextRequest) {
 
     // ── Build message ──
     const lines: string[] = [];
-    lines.push(`Good morning, Bri ✦`);
+    lines.push(`Good morning, ${NAME} ✦`);
     lines.push(`${todayStr}`);
+    lines.push(``);
+
+    const week = weekFor(todayISO);
+    if (week) {
+      lines.push(`🌷 New Me · Day ${dayNumber(todayISO)} of ${TOTAL_DAYS} · Week ${week.n}: ${week.title}`);
+      lines.push(week.focus);
+      lines.push(``);
+    }
+
+    const workout = workoutFor(todayISO);
+    lines.push(`${workout.icon} ${workout.title}${workout.detail ? ` — ${workout.detail}` : ""}`);
+    const raceIn = daysUntil(RACE_DATE, todayISO);
+    if (raceIn > 0) lines.push(`🦃 5K in ${raceIn} days`);
+    lines.push(``);
+
+    lines.push(`🦋 Today's checklist:`);
+    DAILY_CHECKLIST[today.getDay()].forEach(c => lines.push(`☐ ${c.label}`));
+    lines.push(``);
+
+    const todayTodos = (data.todos ?? []).filter(t => t.date === todayISO && !t.done);
+    if (todayTodos.length > 0) {
+      lines.push(`📝 To-dos:`);
+      todayTodos.slice(0, 6).forEach(t => lines.push(`• ${t.text}`));
+      lines.push(``);
+    }
+
+    const kids = data.parenting?.[String(today.getDay())];
+    if (kids?.note) {
+      lines.push(`🧸 ${kids.note}`);
+      lines.push(``);
+    }
+
+    const transits = (data.transits ?? []).filter(t => todayISO >= t.date && todayISO <= (t.endDate || t.date));
+    transits.forEach(t => lines.push(`🪐 ${t.title}${t.note ? ` — ${t.note}` : ""}`));
+    if (transits.length) lines.push(``);
+
+    lines.push(`📖 Daily text: https://wol.jw.org/en/wol/h/r1/lp-e/${today.getFullYear()}/${today.getMonth() + 1}/${today.getDate()}`);
+    lines.push(``);
+    lines.push(`✨ "${affirmationFor(todayISO).text}"`);
     lines.push(``);
 
     if (weekFocus?.intention) {
@@ -106,18 +183,13 @@ export async function GET(req: NextRequest) {
       lines.push(``);
     }
 
-    if (doneHabits > 0 || totalHabits > 0) {
-      lines.push(`💫 Habit streak today: ${doneHabits}/${totalHabits} logged`);
-      lines.push(``);
-    }
-
     if (astroKeyDate) {
       lines.push(`⭐ Astro note for today:`);
       lines.push(`${astroKeyDate.event} — ${astroKeyDate.energy}`);
       lines.push(``);
     }
 
-    lines.push(`You are the Dark Feminine Sage. Rise in your power. 🖤`);
+    lines.push(`Before you open messages: "${MORNING_DECLARATION}" 🖤`);
 
     const message = lines.join("\n");
 
@@ -126,13 +198,13 @@ export async function GET(req: NextRequest) {
     weekTasks.forEach((t, i) => { taskMapping[String(i + 1)] = t.id; });
 
     // Save task mapping to DB for reply handler
-    if (data) {
+    if (hasDB()) {
       (data as any)._briefingTaskMap = { date: todayISO, mapping: taskMapping };
       const { saveData } = await import("@/lib/db");
       await saveData(data);
     }
 
-    return NextResponse.json({ message, taskCount: weekTasks.length });
+    return asText ? new NextResponse(message) : NextResponse.json({ message, taskCount: weekTasks.length });
   } catch (error) {
     console.error("Briefing error:", error);
     return NextResponse.json({ error: "Failed to generate briefing" }, { status: 500 });
