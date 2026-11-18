@@ -184,6 +184,21 @@ export interface HumanDesign {
   notes: string;
 }
 
+// What shows in the big header on Today (editable in Settings)
+export interface Profile {
+  title: string;
+  tagline: string;
+  ticker: string[];
+  photos: string[]; // small JPEG data URLs
+}
+
+export const DEFAULT_PROFILE: Profile = {
+  title: "THE NEW ME",
+  tagline: "becoming the woman I already know I am",
+  ticker: ["CONSISTENCY", "PEACE", "BOUNDARIES", "remember who you're becoming", "FAITH", "DISCIPLINE", "GROWTH", "SELF-TRUST"],
+  photos: [],
+};
+
 // ─── ROOT DATA OBJECT ────────────────────────────────────────────────────────
 
 export interface DashboardData {
@@ -216,6 +231,7 @@ export interface DashboardData {
   hobbyLogs?: { hobbyId: string; date: string }[];
   transits?: Transit[];
   humanDesign?: HumanDesign;
+  profile?: Profile;
 
   // Meta
   lastUpdated: string;

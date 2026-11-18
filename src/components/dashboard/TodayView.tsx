@@ -1,14 +1,15 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { useDashboard } from "@/lib/context";
 import { todayISO, uid, TODO_CATEGORIES } from "@/lib/utils";
 import {
-  NAME, PROJECT_START, TOTAL_DAYS, RACE_DATE, DAILY_QUESTION, MORNING_DECLARATION, AFTERNOON_QUESTION,
+  RACE_DATE, DAILY_QUESTION, MORNING_DECLARATION, AFTERNOON_QUESTION,
   MORNING_FIELDS, EVENING_FIELDS, DAILY_CHECKLIST, SELF_PRESERVATION_IDEAS,
-  weekFor, dayNumber, daysUntil, affirmationFor, workoutFor,
+  weekFor, daysUntil, affirmationFor, workoutFor,
 } from "@/lib/newme";
-import { Card, Fold, Field, CheckRow, Ring, useCelebrate, useDay } from "./ui";
+import { Card, Fold, Field, CheckRow, useCelebrate, useDay } from "./ui";
+import { Hero, WordForToday, Consistency } from "./TodayHeader";
 import type { TodoCategory } from "@/types";
 
 type Slot = "morning" | "afternoon" | "evening";
@@ -31,8 +32,6 @@ export function TodayView({ goTo }: { goTo: (tab: string) => void }) {
   const { celebrate, node: burst } = useCelebrate();
 
   const week = weekFor(today);
-  const dayN = dayNumber(today);
-  const started = today >= PROJECT_START;
   const checklist = DAILY_CHECKLIST[new Date().getDay()];
   const workout = day.lowEnergy ? { icon: "🌿", title: "Gentle Movement", detail: "Low-energy day: a 10-minute walk or stretch counts.", kind: "rest" as const } : workoutFor(today);
   const aff = affirmationFor(today, affOffset);
@@ -98,22 +97,8 @@ export function TodayView({ goTo }: { goTo: (tab: string) => void }) {
     <div className="space-y-5 fade-up">
       {burst}
 
-      {/* ── Header ── */}
-      <div className="flex items-center gap-5 flex-wrap">
-        <Ring pct={pct} size={76}>{Math.round(pct * 100)}%</Ring>
-        <div className="flex-1 min-w-[220px]">
-          <h1 className="font-display text-4xl font-light italic" style={{ color: "#e8dff0" }}>{hello}, {NAME}</h1>
-          <p className="text-sm mt-1" style={{ color: "#9e8fb0" }}>
-            {new Date().toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" })}
-            {started && dayN <= TOTAL_DAYS && <> · <span style={{ color: "#c9a96e" }}>Day {dayN} of {TOTAL_DAYS}</span></>}
-            {!started && <> · <span style={{ color: "#c9a96e" }}>The New Me Project starts tomorrow 🌷</span></>}
-          </p>
-        </div>
-        <button onClick={() => setDay({ lowEnergy: !day.lowEnergy })} className="px-4 py-2.5 rounded-full text-sm tap"
-          style={{ background: day.lowEnergy ? "rgba(155,138,180,0.18)" : "#1a1520", border: `1px solid ${day.lowEnergy ? "#9b8ab4" : "#2e2535"}`, color: day.lowEnergy ? "#c9b8e4" : "#9e8fb0" }}>
-          {day.lowEnergy ? "🌙 Low-energy day: ON" : "🌙 Low-energy day?"}
-        </button>
-      </div>
+      <Hero today={today} hello={hello} pct={pct} lowEnergy={!!day.lowEnergy}
+        onLowEnergy={() => setDay({ lowEnergy: !day.lowEnergy })} onPhotos={() => goTo("settings")} />
 
       {/* ── Week focus + one next thing ── */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -137,6 +122,14 @@ export function TodayView({ goTo }: { goTo: (tab: string) => void }) {
           )}
           <p className="text-xs mt-3 italic" style={{ color: "#6b5f7a" }}>{DAILY_QUESTION}</p>
         </div>
+      </div>
+
+      {/* ── Word for today + consistency ── */}
+      <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+        <div className="md:col-span-3">
+          <WordForToday date={today} read={!!day.dailyTextRead} onRead={() => { setDay({ dailyTextRead: !day.dailyTextRead }); if (!day.dailyTextRead) celebrate("🙏🏽"); }} />
+        </div>
+        <div className="md:col-span-2"><Consistency today={today} /></div>
       </div>
 
       {/* ── Affirmation ── */}
@@ -286,8 +279,6 @@ export function TodayView({ goTo }: { goTo: (tab: string) => void }) {
             </div>
           </Card>
 
-          <DailyText date={today} read={!!day.dailyTextRead} onRead={() => { setDay({ dailyTextRead: !day.dailyTextRead }); if (!day.dailyTextRead) celebrate("🙏🏽"); }} />
-
           <Card title="Family today" icon="🧸" accent="#e0c992" right={<button className="text-xs tap" style={{ color: "#6b5f7a" }} onClick={() => goTo("life")}>edit</button>}>
             {parentingToday?.who || parentingToday?.note ? (
               <>
@@ -312,42 +303,5 @@ export function TodayView({ goTo }: { goTo: (tab: string) => void }) {
         </div>
       </div>
     </div>
-  );
-}
-
-function DailyText({ date, read, onRead }: { date: string; read: boolean; onRead: () => void }) {
-  const [dt, setDt] = useState<{ scripture?: string; body?: string; link: string; error?: string } | null>(null);
-  const [expanded, setExpanded] = useState(false);
-  const [y, m, d] = date.split("-").map(Number);
-  const link = `https://wol.jw.org/en/wol/h/r1/lp-e/${y}/${m}/${d}`;
-
-  useEffect(() => {
-    fetch(`/api/daily-text?date=${date}`).then(r => r.json()).then(setDt).catch(() => setDt({ link, error: "x" }));
-  }, [date, link]);
-
-  return (
-    <Card title="Daily Text" icon="📖" accent="#9b8ab4" right={read ? <span className="text-xs" style={{ color: "#a8c48a" }}>read ✓</span> : null}>
-      {!dt && <p className="text-sm pulse-gold" style={{ color: "#6b5f7a" }}>Loading today&rsquo;s text…</p>}
-      {dt && !dt.error && (
-        <>
-          <p className="font-display text-lg italic leading-snug" style={{ color: "#e0c992" }}>{dt.scripture}</p>
-          {expanded && <div className="text-[15px] mt-3 leading-relaxed whitespace-pre-line" style={{ color: "#e8dff0" }}>{dt.body}</div>}
-          <div className="flex gap-2 mt-3 flex-wrap">
-            <button className="btn-ghost" onClick={() => setExpanded(e => !e)}>{expanded ? "Show less" : "Read the full text"}</button>
-            <button className={read ? "btn-ghost" : "btn-gold"} onClick={onRead}>{read ? "Undo" : "Read ✓"}</button>
-          </div>
-          <a href={dt.link} target="_blank" rel="noreferrer" className="block text-xs mt-3" style={{ color: "#6b5f7a" }}>Source: wol.jw.org ↗</a>
-        </>
-      )}
-      {dt?.error && (
-        <>
-          <p className="text-sm mb-3" style={{ color: "#9e8fb0" }}>Couldn&rsquo;t load the text here right now — open it on JW.org:</p>
-          <div className="flex gap-2 flex-wrap">
-            <a href={link} target="_blank" rel="noreferrer" className="btn-gold inline-block">Open today&rsquo;s text ↗</a>
-            <button className="btn-ghost" onClick={onRead}>{read ? "Undo" : "Read ✓"}</button>
-          </div>
-        </>
-      )}
-    </Card>
   );
 }

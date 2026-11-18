@@ -25,7 +25,7 @@ function Dashboard() {
       <Sidebar active={tab} onChange={go} />
 
       {/* Main content */}
-      <main className="main-pane flex-1 min-h-screen">
+      <main className="main-pane flex-1 min-w-0 min-h-screen">
         <div className="max-w-5xl mx-auto">
           {tab === "today" && <TodayView goTo={t => go(t as Tab)} />}
           {tab === "newme" && <NewMeView />}

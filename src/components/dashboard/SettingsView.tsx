@@ -2,7 +2,9 @@
 
 import { useState } from "react";
 import { useDashboard } from "@/lib/context";
-import type { BirthData } from "@/types";
+import type { BirthData, Profile } from "@/types";
+import { DEFAULT_PROFILE } from "@/types";
+import { resizePhoto } from "./TodayHeader";
 
 export function SettingsView() {
   const { data, update, mode } = useDashboard();
@@ -19,6 +21,16 @@ export function SettingsView() {
   const [briefingResult, setBriefingResult] = useState("");
 
   if (!data) return null;
+
+  const profile: Profile = data.profile ?? DEFAULT_PROFILE;
+  const setProfile = (patch: Partial<Profile>) => update(d => ({ ...d, profile: { ...DEFAULT_PROFILE, ...d.profile, ...patch } }));
+  const TITLE_IDEAS = ["THE NEW ME", "NEW ERA", "PEACE & POWER", "SOFT & UNSTOPPABLE", "BECOMING BRIT", "CHOSEN", "GRACE & GRIT", "HER ERA", "UNBOTHERED & BLESSED", "PROTECTED PEACE"];
+
+  async function addPhotos(files: FileList) {
+    const room = 4 - profile.photos.length;
+    const picked = await Promise.all(Array.from(files).slice(0, room).map(f => resizePhoto(f)));
+    setProfile({ photos: [...profile.photos, ...picked] });
+  }
 
   function exportBackup() {
     const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
@@ -86,6 +98,50 @@ export function SettingsView() {
       <div>
         <h1 className="font-display text-3xl font-light italic" style={{ color: "#e8dff0" }}>Settings</h1>
         <p className="text-sm mt-1" style={{ color: "#6b5f7a" }}>Personalize your dashboard</p>
+      </div>
+
+      {/* Header & photos */}
+      <div className="card p-6">
+        <h2 className="font-display text-lg font-medium mb-1" style={{ color: "#c9a96e" }}>Your Header</h2>
+        <p className="text-sm mb-4" style={{ color: "#9e8fb0" }}>The big title, words and photos at the top of Today.</p>
+
+        <label className="text-xs mb-1 block" style={{ color: "#6b5f7a" }}>Title</label>
+        <input className="input-dark" defaultValue={profile.title} key={profile.title}
+          onBlur={e => e.target.value.trim() && setProfile({ title: e.target.value.trim() })} />
+        <div className="flex flex-wrap gap-2 mt-2">
+          {TITLE_IDEAS.map(t => (
+            <button key={t} onClick={() => setProfile({ title: t })} className="px-3 py-1.5 rounded-full text-xs tap"
+              style={{ background: profile.title === t ? "rgba(201,169,110,0.18)" : "#1a1520", border: `1px solid ${profile.title === t ? "#c9a96e" : "#2e2535"}`, color: "#e8dff0" }}>
+              {t}
+            </button>
+          ))}
+        </div>
+
+        <label className="text-xs mb-1 mt-4 block" style={{ color: "#6b5f7a" }}>Tagline</label>
+        <input className="input-dark" defaultValue={profile.tagline} key={profile.tagline}
+          onBlur={e => setProfile({ tagline: e.target.value })} />
+
+        <label className="text-xs mb-1 mt-4 block" style={{ color: "#6b5f7a" }}>Ticker words (separate with commas — ALL CAPS shows bold, lowercase shows in script)</label>
+        <textarea className="input-dark resize-none" rows={2} defaultValue={profile.ticker.join(", ")} key={profile.ticker.join("|")}
+          onBlur={e => setProfile({ ticker: e.target.value.split(",").map(w => w.trim()).filter(Boolean) })} />
+
+        <label className="text-xs mb-2 mt-4 block" style={{ color: "#6b5f7a" }}>Photos (up to 4 — they show as polaroids)</label>
+        <div className="flex gap-3 flex-wrap">
+          {profile.photos.map((src, i) => (
+            <div key={i} className="relative">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={src} alt="" className="w-20 h-24 object-cover rounded" />
+              <button onClick={() => setProfile({ photos: profile.photos.filter((_, j) => j !== i) })}
+                className="absolute -top-2 -right-2 w-7 h-7 rounded-full text-xs" style={{ background: "#7c2d3e", color: "#f3ece0" }}>✕</button>
+            </div>
+          ))}
+          {profile.photos.length < 4 && (
+            <label className="w-20 h-24 rounded flex flex-col items-center justify-center cursor-pointer text-xs" style={{ border: "1px dashed #4a3f58", color: "#9e8fb0" }}>
+              <span className="text-2xl">＋</span>Add
+              <input type="file" accept="image/*" multiple className="hidden" onChange={e => e.target.files && addPhotos(e.target.files)} />
+            </label>
+          )}
+        </div>
       </div>
 
       {/* Your data */}

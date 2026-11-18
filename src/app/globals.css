@@ -257,3 +257,19 @@ button, a { -webkit-tap-highlight-color: transparent; }
 @media (prefers-reduced-motion: reduce) {
   .fade-up, .fade-up-1, .fade-up-2, .fade-up-3, .fade-up-4, .fade-up-5, .celebrate { animation-duration: 0.01s; }
 }
+
+/* ─── Today header ───────────────────────────────────────────────── */
+.font-wide { font-family: var(--font-wide), sans-serif; }
+.font-script { font-family: var(--font-script), cursive; }
+
+.ticker { overflow: hidden; white-space: nowrap; }
+.ticker-track { display: inline-flex; animation: ticker 40s linear infinite; }
+@keyframes ticker { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+@media (prefers-reduced-motion: reduce) { .ticker-track { animation: none; } }
+
+.polaroid {
+  background: #f3ece0;
+  padding: 6px 6px 18px;
+  border-radius: 3px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.45);
+}

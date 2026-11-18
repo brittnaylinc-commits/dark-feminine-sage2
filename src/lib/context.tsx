@@ -2,7 +2,7 @@
 
 import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from "react";
 import type { DashboardData } from "@/types";
-import { DEFAULT_HABITS, DEFAULT_BRAND_MILESTONES, DEFAULT_HOBBIES } from "@/types";
+import { DEFAULT_HABITS, DEFAULT_BRAND_MILESTONES, DEFAULT_HOBBIES, DEFAULT_PROFILE } from "@/types";
 
 // "cloud" = synced through the Neon database, "device" = saved on this iPad only
 type StorageMode = "cloud" | "device";
@@ -38,6 +38,7 @@ function withDefaults(d: Partial<DashboardData>): DashboardData {
     hobbies: base.hobbies ?? DEFAULT_HOBBIES,
     hobbyLogs: base.hobbyLogs ?? [],
     transits: base.transits ?? [],
+    profile: { ...DEFAULT_PROFILE, ...base.profile },
   };
 }
 

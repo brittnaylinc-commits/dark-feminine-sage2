@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { Cormorant_Garamond, DM_Sans } from "next/font/google";
+import { Cormorant_Garamond, DM_Sans, Unbounded, Great_Vibes } from "next/font/google";
 import "./globals.css";
 
 const display = Cormorant_Garamond({
@@ -13,6 +13,19 @@ const body = DM_Sans({
   subsets: ["latin"],
   weight: ["300", "400", "500", "600"],
   variable: "--font-body",
+});
+
+// Bold extended headline + script greeting for the Today header
+const wide = Unbounded({
+  subsets: ["latin"],
+  weight: ["700", "900"],
+  variable: "--font-wide",
+});
+
+const script = Great_Vibes({
+  subsets: ["latin"],
+  weight: ["400"],
+  variable: "--font-script",
 });
 
 export const metadata: Metadata = {
@@ -31,7 +44,7 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className={`${display.variable} ${body.variable}`}>
+    <html lang="en" className={`${display.variable} ${body.variable} ${wide.variable} ${script.variable}`}>
       <body className="bg-obsidian text-text font-body antialiased">{children}</body>
     </html>
   );
